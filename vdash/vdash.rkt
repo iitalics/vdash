@@ -100,6 +100,7 @@
   )
 
 
+(provide judgement-parse)
 (define-syntax judgement-parse
   (syntax-parser
     [(_ stx-obj
@@ -110,6 +111,7 @@
            (syntax-parse the-stx-obj
              jc.stxparse ...)))]))
 
+(provide judgement-parse)
 (define-syntax (judgement-parser stx)
   (syntax-parse stx
     [(_ jc ...)
