@@ -29,18 +29,28 @@
 (module+ test
   ;; Tests to be run with raco test
   (require racket
-           "vdash.rkt"
            (for-syntax "vdash.rkt"
                        syntax/parse))
 
-  (define-relation-keys #:in (ADD) #:out (RESULT))
+  (begin-for-syntax
+    (define-relation-keys
+      #:in (ADD)
+      #:out (RESULT)))
 
   (define-syntax N
     (judgement-parser
-     [(n x:integer) ADD y
+     [(_ x:integer) ADD y
       ------------
       [⊢ RESULT (+ x y)]]))
 
+  (define-syntax Succ
+    (judgement-parser
+     [(_ e:expr)
+      [⊢ e ADD 1 RESULT x]
+      ------------
+      [≻ (printf "result = ~a\n" x)]]))
+
+  (Succ 2)
   )
 
 (module+ main

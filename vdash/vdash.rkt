@@ -20,9 +20,6 @@
     (make-free-id-table))
 
   (define (delim-direction id)
-    (printf "looking up ~s among ~s\n"
-            (syntax-e id)
-            (map syntax-e (free-id-table-keys delim-directions)))
     (free-id-table-ref delim-directions
                        id
                        (lambda ()
@@ -50,9 +47,6 @@
      #:do [(for ([key (in-syntax #'(keys ...))])
              (when (free-id-table-ref! delim-directions key #f)
                (raise-syntax-error #f "relation key already defined" key))
-             (printf "defined ~a, dir ~a\n"
-                     (syntax-e key)
-                     (syntax-e #'dd.dir))
              (free-id-table-set! delim-directions key
                                  (syntax-e #'dd.dir)))]
      #'(begin
@@ -109,9 +103,9 @@
 
              ; output expression & binding pattern
              #:attr pat #'(out-pat ...)
-             #:attr expr #'(relation #'targ-expr
-                                     tg:in (list (cons 'in-key #'in-expr) ...)
-                                     tg:out (list 'out-key ...))))
+             #:attr expr #'(eval-relation #'targ-expr
+                                          tg:in (list (cons 'in-key #'in-expr) ...)
+                                          tg:out (list 'out-key ...))))
 
   (define-syntax-class conclusion
     #:datum-literals (⊢ ≻)

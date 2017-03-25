@@ -14,8 +14,11 @@
 
 (define (has-prop-keys? stx tg keys)
   (let ([h (syntax-property stx tg)])
-    (and h
-         (empty? (set-symmetric-difference (hash-keys h) keys)))))
+    (cond
+      [(empty? keys) #t]
+      [(false? h) #f]
+      [else
+       (empty? (set-symmetric-difference (hash-keys h) keys))])))
 
 (define (get-prop-stx stx tg keys)
   (let ([h (syntax-property stx tg)])
@@ -35,8 +38,13 @@
   (syntax-property dst-stx tg
                    (syntax-property src-stx tg)))
 
+(require (for-template racket/base))
+
+(define (sentinel)
+  (error "Sentinel should not be evaluated; should only be expanded by a premise"))
+
 (define (make-prop-sentinel tg k/s)
-  (set-prop-keys/stx (syntax-property #'(quote 0)
+  (set-prop-keys/stx (syntax-property #`(#%app #,sentinel)
                                       tg:sent #t)
                      tg k/s))
 
