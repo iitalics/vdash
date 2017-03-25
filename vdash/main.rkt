@@ -34,7 +34,7 @@
 
   (begin-for-syntax
     (define-relation-keys
-      #:in (P=)
+      #:in (P+ P*)
       #:out (=>))
 
     (define-literal-set peano
@@ -46,45 +46,56 @@
   (define-syntax zer
     (judgement-parser
      #:literal-sets (peano)
-     ; 0 = 0
-     [(zer) P= (zer)
-      --------
-      [⊢ => TRUE]]
-     ; 0 != anything else
-     [(zer) P= _
+     ;;;;;;;;;;;
+     [(zer) P+ n
       ---------
-      [⊢ => FALSE]]))
+      [⊢ => n]]
+     ;;;;;;;;;;;
+     [(zer) P* n
+      ---------
+      [⊢ => (zer)]]
+     ))
 
   (define-syntax suc
     (judgement-parser
      #:literal-sets (peano)
-     ;;;;;;;;;;
-     [(suc n) P= (suc m)
-      [⊢ n P= m => TRUE]
-      --------
-      [⊢ => TRUE]]
-     ;;
-     [(suc n) P= _
-      ---------
-      [⊢ => FALSE]]))
+     ;;;;;;;;;;;;
+     [(suc n) P+ m
+      [⊢ n P+ m => s]
+      -----------
+      [⊢ => (suc s)]]
+     ;;;;;;;;;;;;
+     [(suc n) P* m
+      [⊢ n P* m => p]
+      [⊢ m P+ p => s]
+      ------------
+      [⊢ => s]]))
 
 
-
-  (define-syntax p=?
+  (define-syntax p+
     (judgement-parser
      #:literal-sets (peano)
      [(_ x y)
-      [⊢ x P= y => TRUE]
+      [⊢ x P+ y => z]
       ------------
-      [≻ #t]]
-     [(_ x y)
-      [⊢ x P= y => FALSE]
-      ------------
-      [≻ #f]]))
+      [≻ 'z]]))
 
-  (displayln (p=? (zer) (zer)))
-  (displayln (p=? (zer) (suc (zer))))
-  (displayln (p=? (suc (zer)) (suc (zer))))
+  (define-syntax p*
+    (judgement-parser
+     #:literal-sets (peano)
+     [(_ x y)
+      [⊢ x P* y => z]
+      ------------
+      [≻ 'z]]))
+
+  (displayln (p+ (zer) (zer)))
+  (displayln (p+ (zer) (suc (zer))))
+  (displayln (p+ (suc (zer)) (suc (zer))))
+  (displayln (p+ (suc (suc (zer))) (suc (zer))))
+  (displayln '---------)
+  (displayln (p* (zer) (suc (suc (zer)))))
+  (displayln (p* (suc (suc (zer))) (suc (suc (zer)))))
+  (displayln (p* (suc (suc (zer))) (zer)))
 
   )
 
