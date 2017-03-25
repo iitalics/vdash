@@ -27,15 +27,13 @@
     (free-id-table-ref delim-directions
                        id
                        (lambda ()
-                         (raise-syntax-error #f (format "relation key undefined: ~a"
-                                                        (syntax-e id))
-                                             id))))
+                         (raise-syntax-error #f "relation key undefined" id))))
 
   (define-syntax-class judgement-clause
     #:attributes (stxparse)
     (pattern [pat pre-premise ...
                   :---- ~!
-                  conc:conclusion ...]
+                  . conc:conclusion]
              ; extract premise
              #:with ((~seq in-keys:id in-pats:expr) ... prem:premise ...) #'(pre-premise ...)
 
@@ -43,7 +41,7 @@
              #:with bad-keys (filter-not (lambda (id) (eq? 'in (delim-direction id)))
                                          (syntax->list #'(in-keys ...)))
              #:fail-unless
-             (null? (syntax-e #'bad-keys)) (format "relation key is not an output: ~a"
+             (null? (syntax-e #'bad-keys)) (format "relation key is not an input"
                                                    (first (syntax-e #'bad-keys)))
 
              ; output a syntax-parse clause
@@ -52,7 +50,7 @@
                 #:when (has-prop-keys? the-stx tg:in '(in-keys ...))
                 #:with (in-pats ...) (get-prop-stx the-stx tg:in '(in-keys ...))
                 #:with (prem.pat ...) (list prem.expr ...)
-                conc.expr ...]))
+                conc.expr]))
 
   (define-syntax-class premise
     #:datum-literals (⊢)
@@ -86,7 +84,7 @@
              #:with bad-keys (filter-not (lambda (id) (eq? 'out (delim-direction id)))
                                          (syntax->list #'(out-key ...)))
              #:fail-unless
-             (null? (syntax-e #'bad-keys)) (format "relation key is not an output: ~a"
+             (null? (syntax-e #'bad-keys)) (format "relation key is not an output"
                                                    (first (syntax-e #'bad-keys)))
              ; output a sentinel thing
              #:attr expr
@@ -95,7 +93,11 @@
 
     (pattern ([≻ new-expr])
              #:attr expr
-             #'(copy-prop-keys/stx tg:in #'new-expr the-stx)))
+             #'(copy-prop-keys/stx tg:in #'new-expr the-stx))
+
+    (pattern p
+             #:post (~fail "not a invalid conclusion")
+             #:attr expr #'#f))
 
   )
 
@@ -111,7 +113,7 @@
            (syntax-parse the-stx-obj
              jc.stxparse ...)))]))
 
-(provide judgement-parse)
+(provide judgement-parser)
 (define-syntax (judgement-parser stx)
   (syntax-parse stx
     [(_ jc ...)

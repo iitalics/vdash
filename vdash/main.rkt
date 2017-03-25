@@ -28,6 +28,17 @@
 
 (module+ test
   ;; Tests to be run with raco test
+  (require racket
+           "vdash.rkt"
+           (for-syntax "vdash.rkt"
+                       syntax/parse))
+
+  (define-syntax N
+    (judgement-parser
+     [(n x:integer) + y
+      ------------
+      [≻ (+ x y)]]))
+
   )
 
 (module+ main
