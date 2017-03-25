@@ -34,23 +34,58 @@
 
   (begin-for-syntax
     (define-relation-keys
-      #:in (ADD)
-      #:out (RESULT)))
+      #:in (P=)
+      #:out (=>))
 
-  (define-syntax N
+    (define-literal-set peano
+      #:datum-literals (TRUE FALSE zer suc)
+      ())
+    )
+
+
+  (define-syntax zer
     (judgement-parser
-     [(_ x:integer) ADD y
-      ------------
-      [⊢ RESULT (+ x y)]]))
+     #:literal-sets (peano)
+     ; 0 = 0
+     [(zer) P= (zer)
+      --------
+      [⊢ => TRUE]]
+     ; 0 != anything else
+     [(zer) P= _
+      ---------
+      [⊢ => FALSE]]))
 
-  (define-syntax Succ
+  (define-syntax suc
     (judgement-parser
-     [(_ e:expr)
-      [⊢ e ADD 1 RESULT x]
-      ------------
-      [≻ (printf "result = ~a\n" x)]]))
+     #:literal-sets (peano)
+     ;;;;;;;;;;
+     [(suc n) P= (suc m)
+      [⊢ n P= m => TRUE]
+      --------
+      [⊢ => TRUE]]
+     ;;
+     [(suc n) P= _
+      ---------
+      [⊢ => FALSE]]))
 
-  (Succ 2)
+
+
+  (define-syntax p=?
+    (judgement-parser
+     #:literal-sets (peano)
+     [(_ x y)
+      [⊢ x P= y => TRUE]
+      ------------
+      [≻ #t]]
+     [(_ x y)
+      [⊢ x P= y => FALSE]
+      ------------
+      [≻ #f]]))
+
+  (displayln (p=? (zer) (zer)))
+  (displayln (p=? (zer) (suc (zer))))
+  (displayln (p=? (suc (zer)) (suc (zer))))
+
   )
 
 (module+ main
