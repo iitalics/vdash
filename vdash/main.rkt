@@ -33,11 +33,13 @@
            (for-syntax "vdash.rkt"
                        syntax/parse))
 
+  (define-relation-keys #:in (ADD) #:out (RESULT))
+
   (define-syntax N
     (judgement-parser
-     [(n x:integer) + y
+     [(n x:integer) ADD y
       ------------
-      [≻ (+ x y)]]))
+      [⊢ RESULT (+ x y)]]))
 
   )
 
