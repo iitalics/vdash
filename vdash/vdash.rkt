@@ -2,7 +2,7 @@
 (require syntax/parse
          racket/stxparam
          "stx-props.rkt")
-(require (for-syntax (only-in racket/list first filter-not)
+(require (for-syntax (only-in racket/list first filter-not append*)
                      (only-in racket/sequence in-syntax)
                      racket/base
                      racket/syntax
@@ -62,6 +62,13 @@
              #:when (regexp-match
                      #px"-{4,}"
                      (symbol->string (syntax-e #'x)))))
+
+  (define-splicing-syntax-class stxparse-kw
+    (pattern (~and kw (~or #:literals
+                          #:datum-literals
+                          #:literal-sets
+                          #:description
+                          #:conventions))))
 
   (define-syntax-class judgement-clause
     #:attributes (stxparse)
@@ -131,20 +138,32 @@
              #'(copy-prop-keys/stx tg:in #'new-expr the-stx))
 
     (pattern p
-             #:post (~fail "not a invalid conclusion")
+             #:post (~fail "not a valid conclusion")
              #:attr expr #'#f))
+
+  ;; #'((a b) (c d) (e f)) -> #'(a b c d e f)
+  (define (stx-splice stxl
+                      #:src [src stxl])
+    (datum->syntax src
+                   (append* (map syntax->list
+                                 (syntax->list stxl)))))
   )
 
 (provide judgement-parse)
 (define-syntax judgement-parse
   (syntax-parser
     [(_ stx-obj
-        jc:judgement-clause ...)
+        (~seq spkw:stxparse-kw ~! arg) ...
+        . jcs)
+     #:and ~!
+     #:with (jc:judgement-clause ...) #'jcs
+     #:with parse-body (stx-splice #'([spkw.kw arg] ...
+                                      [jc ...]))
      #'(let ([the-stx-obj stx-obj])
          (syntax-parameterize
              ([the-stx (make-rename-transformer #'the-stx-obj)])
            (syntax-parse the-stx-obj
-             jc.stxparse ...)))]))
+             . parse-body)))]))
 
 (provide judgement-parser)
 (define-syntax (judgement-parser stx)
