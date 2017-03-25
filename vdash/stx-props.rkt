@@ -20,6 +20,10 @@
       [else
        (empty? (set-symmetric-difference (hash-keys h) keys))])))
 
+(define (get-prop-keys stx tg)
+  (let ([h (syntax-property stx tg)])
+    (if h (hash-keys h) '())))
+
 (define (get-prop-stx stx tg keys)
   (let ([h (syntax-property stx tg)])
     (map (curry hash-ref h) keys)))

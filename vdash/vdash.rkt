@@ -105,7 +105,8 @@
              #:attr pat #'(out-pat ...)
              #:attr expr #'(eval-relation #'targ-expr
                                           tg:in (list (cons 'in-key #'in-expr) ...)
-                                          tg:out (list 'out-key ...))))
+                                          tg:out (list 'out-key ...)
+                                          '())))
 
   (define-syntax-class conclusion
     #:datum-literals (⊢ ≻)
@@ -132,9 +133,7 @@
     (pattern p
              #:post (~fail "not a invalid conclusion")
              #:attr expr #'#f))
-
   )
-
 
 (provide judgement-parse)
 (define-syntax judgement-parse
@@ -154,3 +153,18 @@
      (syntax/loc stx
        (lambda (stx-obj)
          (judgement-parse stx-obj jc ...)))]))
+
+
+
+(define (eval-relation stx
+                       tg-in in-keys/stx
+                       tg-out out-keys
+                       ctx)
+  (let* ([stx- (set-prop-keys/stx stx tg-in in-keys/stx)]
+         [stx/e (local-expand stx- 'expression '())])
+    (unless (has-prop-keys? stx/e tg-out out-keys)
+      (raise-syntax-error #f (format "incorrect judgement output keys; expected ~s, got ~s"
+                                     out-keys
+                                     (get-prop-keys stx/e tg-out))
+                          stx/e))
+    (get-prop-stx stx/e tg-out out-keys)))
