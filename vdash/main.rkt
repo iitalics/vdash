@@ -27,21 +27,20 @@
 ;; Code here
 
 (module+ test
-  ;; Tests to be run with raco test
   (require racket
            (for-syntax "vdash.rkt"
                        syntax/parse))
+
+  ;; PEANO ARITHMETIC
 
   (begin-for-syntax
     (define-relation-keys
       #:in (P+ P*)
       #:out (=>))
-
     (define-literal-set peano
       #:datum-literals (TRUE FALSE zer suc)
       ())
     )
-
 
   (define-syntax zer
     (judgement-parser
@@ -88,14 +87,16 @@
       ------------
       [≻ 'z]]))
 
-  (displayln (p+ (zer) (zer)))
-  (displayln (p+ (zer) (suc (zer))))
-  (displayln (p+ (suc (zer)) (suc (zer))))
-  (displayln (p+ (suc (suc (zer))) (suc (zer))))
-  (displayln '---------)
-  (displayln (p* (zer) (suc (suc (zer)))))
-  (displayln (p* (suc (suc (zer))) (suc (suc (zer)))))
-  (displayln (p* (suc (suc (zer))) (zer)))
+  (check-equal? (p+ (zer) (zer))               '(zer))
+  (check-equal? (p+ (zer) (suc (zer)))         '(suc (zer)))
+  (check-equal? (p+ (suc (zer)) (suc (zer)))   '(suc (suc (zer))))
+  (check-equal? (p+ (suc (suc (zer))) (zer))   '(suc (suc (zer))))
+
+  (check-equal? (p* (zer) (zer))               '(zer))
+  (check-equal? (p* (zer) (suc (zer)))         '(zer))
+  (check-equal? (p* (suc (zer)) (zer))         '(zer))
+  (check-equal? (p* (suc (suc (zer))) (suc (zer)))       '(suc (suc (zer))))
+  (check-equal? (p* (suc (suc (zer))) (suc (suc (zer)))) '(suc (suc (suc (suc (zer))))))
 
   )
 
