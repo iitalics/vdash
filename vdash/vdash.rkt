@@ -57,6 +57,13 @@
          (define-relation-keys . dd.after))]))
 
 (begin-for-syntax
+  ;; #'((a b) (c d) (e f)) -> #'(a b c d e f)
+  (define (stx-splice stxl
+                      #:src [src stxl])
+    (datum->syntax src
+                   (append* (map syntax->list
+                                 (syntax->list stxl)))))
+
   (define-syntax-class ----
     (pattern x:id
              #:when (regexp-match
@@ -86,12 +93,12 @@
                                                    (first (syntax-e #'bad-keys)))
 
              ; output a syntax-parse clause
-             #:attr stxparse
-             #'[pat
-                #:when (has-prop-keys? the-stx tg:in '(in-keys ...))
-                #:with (in-pats ...) (get-prop-stx the-stx tg:in '(in-keys ...))
-                #:with (prem.pat ...) (list prem.expr ...)
-                conc.expr]))
+             #:with parse-body
+             (stx-splice #'([#:when (has-prop-keys? the-stx tg:in '(in-keys ...))]
+                            [#:with (in-pats ...) (get-prop-stx the-stx tg:in '(in-keys ...))]
+                            [#:with prem.pat prem.expr] ...
+                            [conc.expr]))
+             #:attr stxparse #'[pat . parse-body]))
 
   (define-syntax-class premise
     #:datum-literals (⊢)
@@ -141,12 +148,6 @@
              #:post (~fail "not a valid conclusion")
              #:attr expr #'#f))
 
-  ;; #'((a b) (c d) (e f)) -> #'(a b c d e f)
-  (define (stx-splice stxl
-                      #:src [src stxl])
-    (datum->syntax src
-                   (append* (map syntax->list
-                                 (syntax->list stxl)))))
   )
 
 (provide judgement-parse)
