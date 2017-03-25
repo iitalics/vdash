@@ -1,6 +1,7 @@
 #lang racket
 (require syntax/parse
-         racket/stxparam)
+         racket/stxparam
+         "stx-props.rkt")
 (require (for-syntax racket/base
                      syntax/parse))
 
