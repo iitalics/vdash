@@ -1,7 +1,14 @@
 #lang racket
-(require syntax/parse)
+(require syntax/parse
+         racket/stxparam)
 (require (for-syntax racket/base
                      syntax/parse))
+
+
+
+(define-syntax-parameter the-stx
+  (lambda _
+    (error "the-stx used outside of judgement")))
 
 (begin-for-syntax
   (define-syntax-class ----
@@ -12,18 +19,27 @@
 
   (define-syntax-class judgement-clause
     #:attributes (stxparse)
-    (pattern [patn pre-premise ...
-                   :----
-                   conclusion ...]
-             #:attr stxparse #'[_ #:when #f #'()]))
+    (pattern [pat pre-premise ...
+                  :----
+                  conclusion ...]
+             #:with ((~seq in-keys:id in-pats:expr) ... premises ...) #'(pre-premise ...)
+             #:attr stxparse
+             #'[pat
+                #:when (has-in-keys? '(in-keys ...) the-stx)
+                #:with (in-pats ...) (get-in-stx '(in-keys ...) the-stx)
+                premises ...
+                conclusion ...]))
   )
 
 (define-syntax judgement-parse
   (syntax-parser
     [(_ stx-obj
         jc:judgement-clause ...)
-     #'(syntax-parse stx-obj
-         jc.stxparse ...)]))
+     #'(let ([the-stx-obj stx-obj])
+         (syntax-parameterize
+             ([the-stx (make-rename-transformer #'the-stx-obj)])
+           (syntax-parse the-stx-obj
+             jc.stxparse ...)))]))
 
 (define-syntax (judgement-parser stx)
   (syntax-parse stx
