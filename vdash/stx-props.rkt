@@ -10,24 +10,35 @@
 
 (define tg:in 'tg-in)
 (define tg:out 'tg-out)
+(define tg:sent 'tg-sent)
 
-
-(define (has-in-keys? keys stx)
-  (let ([h (syntax-property stx tg:in)])
+(define (has-prop-keys? stx tg keys)
+  (let ([h (syntax-property stx tg)])
     (and h
-         (empty? (set-symmetric-difference (hash-keys h)
-                                           keys)))))
+         (empty? (set-symmetric-difference (hash-keys h) keys)))))
 
-(define (get-in-stx keys stx)
-  (let ([h (syntax-property stx tg:in)])
+(define (get-prop-stx stx tg keys)
+  (let ([h (syntax-property stx tg)])
     (map (curry hash-ref h) keys)))
 
-(define (set-in-keys/stx stx k/s)
-  (when (syntax-property stx tg:in)
-    (printf "warning: overwriting keys: ~a"
-            (hash-keys (syntax-property stx tg:in))))
-  (syntax-property stx
-                   tg:in (make-hash k/s)))
+(define (set-prop-keys/stx stx tg k/s)
+  (when (syntax-property stx tg)
+    (printf "warning: overwriting keys: ~a for tag:~ a"
+            (hash-keys (syntax-property stx tg))
+            tg))
+  (syntax-property stx tg (make-hash k/s)))
 
-(define (set-in-keys/stx* stx . r)
-  (set-in-keys/stx stx (plist->alist r)))
+(define (set-prop-keys/stx* stx tg . r)
+  (set-prop-keys/stx stx tg (plist->alist r)))
+
+(define (copy-prop-keys/stx tg dst-stx src-stx)
+  (syntax-property dst-stx tg
+                   (syntax-property src-stx tg)))
+
+(define (make-prop-sentinel tg k/s)
+  (set-prop-keys/stx (syntax-property #'(quote 0)
+                                      tg:sent #t)
+                     tg k/s))
+
+(define (make-prop-sentinel* tg . r)
+  (make-prop-sentinel tg (plist->alist r)))
