@@ -158,7 +158,7 @@
      #:and ~!
      #:with (jc:judgement-clause ...) #'jcs
      #:with parse-body (stx-splice #'([spkw.kw arg] ...
-                                      [jc ...]))
+                                      [jc.stxparse ...]))
      #'(let ([the-stx-obj stx-obj])
          (syntax-parameterize
              ([the-stx (make-rename-transformer #'the-stx-obj)])
