@@ -10,7 +10,7 @@
 
   (begin-for-syntax
     (define-relation-keys
-      #:in (P+ P*)
+      #:in (P+ P* toInt)
       #:out (=>))
     (define-literal-set peano
       #:datum-literals (TRUE FALSE zer suc)
@@ -28,6 +28,10 @@
      [(zer) P* n
       ---------
       [⊢ => (zer)]]
+     ;;;;;;;;;;;
+     [(zer) toInt ()
+      -----------
+      [⊢ => 0]]
      ))
 
   (define-syntax suc
@@ -43,8 +47,14 @@
       [⊢ n P* m => p]
       [⊢ m P+ p => s]
       ------------
-      [⊢ => s]]))
-
+      [⊢ => s]]
+     ;;;;;;;;;;;;
+     [(suc n) toInt ()
+      [⊢ n toInt() => k]
+      #:with r (add1 (syntax-e #'k))
+      -------------
+      [⊢ => r]]
+     ))
 
   (define-syntax p+
     (judgement-parser
@@ -62,6 +72,13 @@
       ------------
       [≻ 'z]]))
 
+  (define-syntax nat->int
+    (judgement-parser
+     [(_ n)
+      [⊢ n toInt () => k]
+      ------------
+      [≻ 'k]]))
+
   (check-equal? (p+ (zer) (zer))               '(zer))
   (check-equal? (p+ (zer) (suc (zer)))         '(suc (zer)))
   (check-equal? (p+ (suc (zer)) (suc (zer)))   '(suc (suc (zer))))
@@ -72,6 +89,10 @@
   (check-equal? (p* (suc (zer)) (zer))         '(zer))
   (check-equal? (p* (suc (suc (zer))) (suc (zer)))       '(suc (suc (zer))))
   (check-equal? (p* (suc (suc (zer))) (suc (suc (zer)))) '(suc (suc (suc (suc (zer))))))
+
+  (check-equal? (nat->int (zer)) 0)
+  (check-equal? (nat->int (suc (zer))) 1)
+  (check-equal? (nat->int (suc (suc (zer)))) 2)
 
   )
 

@@ -72,18 +72,18 @@
 
   (define-splicing-syntax-class stxparse-kw
     (pattern (~and kw (~or #:literals
-                          #:datum-literals
-                          #:literal-sets
-                          #:description
-                          #:conventions))))
+                           #:datum-literals
+                           #:literal-sets
+                           #:description
+                           #:conventions))))
 
   (define-syntax-class judgement-clause
     #:attributes (stxparse)
-    (pattern [pat pre-premise ...
+    (pattern [pat before-line ...
                   :---- ~!
                   . conc:conclusion]
              ; extract premise
-             #:with ((~seq in-keys:id in-pats:expr) ... prem:premise ...) #'(pre-premise ...)
+             #:with ((~seq in-keys:id in-pats:expr) ... . prems:premises) #'(before-line ...)
 
              ; check key direction
              #:with bad-keys (filter-not (lambda (id) (eq? 'in (delim-direction id)))
@@ -96,13 +96,40 @@
              #:with parse-body
              (stx-splice #'([#:when (has-prop-keys? the-stx tg:in '(in-keys ...))]
                             [#:with (in-pats ...) (get-prop-stx the-stx tg:in '(in-keys ...))]
-                            [#:with prem.pat prem.expr] ...
+                            prems.stxparse-directives ...
                             [conc.expr]))
              #:attr stxparse #'[pat . parse-body]))
 
+  (define-syntax-class premises
+    #:attributes ((stxparse-directives 1))
+    ; pattern directive
+    (pattern [(~and kw (~or #:with
+                            #:fail-when
+                            #:fail-unless))
+              arg1 arg2
+              . after:premises]
+             #:with (stxparse-directives ...)
+             #'([kw arg1 arg2] after.stxparse-directives ...))
+    (pattern [(~and kw (~or #:and
+                            #:do
+                            #:when))
+              arg1
+              . after:premises]
+             #:with (stxparse-directives ...)
+             #'([kw arg1] after.stxparse-directives ...))
+
+    ; normal premise
+    (pattern [prem:premise . after:premises]
+             #:with (stxparse-directives ...)
+             #'(prem.stxparse-directive
+                after.stxparse-directives ...))
+
+    ; base case
+    (pattern [] #:with (stxparse-directives ...) #'()))
+
   (define-syntax-class premise
     #:datum-literals (⊢)
-    #:attributes (pat expr)
+    #:attributes (stxparse-directive)
     (pattern [⊢ targ-expr (~seq i/o-key:id i/o-expr:expr) ...]
              #:with ({in-key in-expr} ...)
 
@@ -115,12 +142,13 @@
              (filter (syntax-parser [{k v} (eq? 'out (delim-direction #'k))])
                      (syntax->list #'((i/o-key i/o-expr) ...)))
 
-             ; output expression & binding pattern
-             #:attr pat #'(out-pat ...)
-             #:attr expr #'(eval-relation #'targ-expr
+             ; output expression & directive
+             #:with expr #'(eval-relation #'targ-expr
                                           tg:in (list (cons 'in-key #'in-expr) ...)
                                           tg:out (list 'out-key ...)
-                                          '())))
+                                          '())
+             #:attr stxparse-directive
+             #'[#:with (out-pat ...) expr]))
 
   (define-syntax-class conclusion
     #:datum-literals (⊢ ≻)
