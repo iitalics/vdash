@@ -57,18 +57,31 @@
          (define-relation-keys . dd.after))]))
 
 (begin-for-syntax
-  ;; #'((a b) (c d) (e f)) -> #'(a b c d e f)
+  ;; utilities ;;
   (define (stx-splice stxl
                       #:src [src stxl])
     (datum->syntax src
                    (append* (map syntax->list
                                  (syntax->list stxl)))))
 
+  ;; syntax 'glyphs' ;;
   (define-syntax-class ----
     (pattern x:id
              #:when (regexp-match
                      #px"-{4,}"
                      (symbol->string (syntax-e #'x)))))
+
+  (define-syntax-class ⊢/p
+    #:datum-literals (⊢ if)
+    (pattern ⊢)
+    (pattern if))
+
+  (define-syntax-class ⊢/c
+    #:datum-literals (⊢ then)
+    (pattern ⊢)
+    (pattern then))
+
+  ;; actual syntax ;;
 
   (define-splicing-syntax-class stxparse-kw
     (pattern (~and kw (~or #:literals
@@ -82,7 +95,7 @@
     (pattern [pat before-line ...
                   :---- ~!
                   . conc:conclusion]
-             ; extract premise
+             ; extract keys & premises
              #:with ((~seq in-keys:id in-pats:expr) ... . prems:premises) #'(before-line ...)
 
              ; check key direction
@@ -103,6 +116,7 @@
   (define-syntax-class premises
     #:attributes ((stxparse-directives 1))
     ; pattern directive
+    ; (2 argument kw)
     (pattern [(~and kw (~or #:with
                             #:fail-when
                             #:fail-unless))
@@ -110,6 +124,7 @@
               . after:premises]
              #:with (stxparse-directives ...)
              #'([kw arg1 arg2] after.stxparse-directives ...))
+    ; (1 argument kw)
     (pattern [(~and kw (~or #:and
                             #:do
                             #:when))
@@ -127,10 +142,10 @@
     ; base case
     (pattern [] #:with (stxparse-directives ...) #'()))
 
+
   (define-syntax-class premise
-    #:datum-literals (⊢)
     #:attributes (stxparse-directive)
-    (pattern [⊢ targ-expr (~seq i/o-key:id i/o-expr:expr) ...]
+    (pattern [:⊢/p targ-expr (~seq i/o-key:id i/o-expr:expr) ...]
              #:with ({in-key in-expr} ...)
 
              ; find input keys
@@ -151,12 +166,11 @@
              #'[#:with (out-pat ...) expr]))
 
   (define-syntax-class conclusion
-    #:datum-literals (⊢ ≻)
     #:attributes (expr)
     (pattern (#:error msg fmt ...)
              #:attr expr
              #'(raise-syntax-error #f (format msg fmt ...) the-stx))
-    (pattern ([⊢ (~seq out-key:id out-expr:expr) ...])
+    (pattern ([:⊢/c (~seq out-key:id out-expr:expr) ...])
              ; check key direction
              #:with bad-keys (filter-not (lambda (id) (eq? 'out (delim-direction id)))
                                          (syntax->list #'(out-key ...)))
@@ -168,14 +182,13 @@
              #'(make-prop-sentinel tg:out
                                    (list (cons 'out-key #'out-expr) ...)))
 
-    (pattern ([≻ new-expr])
+    (pattern (new-expr)
              #:attr expr
              #'(copy-prop-keys/stx tg:in #'new-expr the-stx))
 
     (pattern p
              #:post (~fail "not a valid conclusion")
              #:attr expr #'#f))
-
   )
 
 (provide judgement-parse)

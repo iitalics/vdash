@@ -17,67 +17,66 @@
       ())
     )
 
+
   (define-syntax zer
     (judgement-parser
      #:literal-sets (peano)
-     ;;;;;;;;;;;
+
      [(zer) P+ n
       ---------
-      [⊢ => n]]
-     ;;;;;;;;;;;
+      [then => n]]
+
      [(zer) P* n
       ---------
-      [⊢ => (zer)]]
-     ;;;;;;;;;;;
+      [then => (zer)]]
+
      [(zer) toInt ()
       -----------
-      [⊢ => 0]]
+      [then => 0]]
      ))
+
 
   (define-syntax suc
     (judgement-parser
      #:literal-sets (peano)
-     ;;;;;;;;;;;;
+
      [(suc n) P+ m
-      [⊢ n P+ m => s]
+      [if n P+ m => s]
       -----------
-      [⊢ => (suc s)]]
-     ;;;;;;;;;;;;
+      [then => (suc s)]]
+
      [(suc n) P* m
-      [⊢ n P* m => p]
-      [⊢ m P+ p => s]
+      [if n P* m => p]
+      [if m P+ p => s]
       ------------
-      [⊢ => s]]
-     ;;;;;;;;;;;;
+      [then => s]]
+
      [(suc n) toInt ()
-      [⊢ n toInt() => k]
+      [if n toInt() => k]
       #:with r (add1 (syntax-e #'k))
       -------------
-      [⊢ => r]]
+      [then => r]]
      ))
 
   (define-syntax p+
     (judgement-parser
      #:literal-sets (peano)
-     [(_ x y)
-      [⊢ x P+ y => z]
+     [(_ x y) [if x P+ y => z]
       ------------
-      [≻ 'z]]))
+      'z]))
 
   (define-syntax p*
     (judgement-parser
      #:literal-sets (peano)
-     [(_ x y)
-      [⊢ x P* y => z]
+     [(_ x y) [if x P* y => z]
       ------------
-      [≻ 'z]]))
+      'z]))
 
   (define-syntax nat->int
     (judgement-parser
-     [(_ n)
-      [⊢ n toInt () => k]
+     [(_ n) [if n toInt () => k]
       ------------
-      [≻ 'k]]))
+      'k]))
 
   (check-equal? (p+ (zer) (zer))               '(zer))
   (check-equal? (p+ (zer) (suc (zer)))         '(suc (zer)))
