@@ -72,14 +72,14 @@
                      (symbol->string (syntax-e #'x)))))
 
   (define-syntax-class ⊢/p
-    #:datum-literals (⊢ if)
+    #:datum-literals (⊢)
     (pattern ⊢)
-    (pattern if))
+    (pattern #:if))
 
   (define-syntax-class ⊢/c
-    #:datum-literals (⊢ then)
+    #:datum-literals (⊢)
     (pattern ⊢)
-    (pattern then))
+    (pattern #:then))
 
   ;; actual syntax ;;
 
@@ -167,10 +167,13 @@
 
   (define-syntax-class conclusion
     #:attributes (expr)
+    ; raise error as conclusion
     (pattern (#:error msg fmt ...)
              #:attr expr
              #'(raise-syntax-error #f (format msg fmt ...) the-stx))
-    (pattern ([:⊢/c (~seq out-key:id out-expr:expr) ...])
+
+    ; tagged conclusion
+    (pattern (:⊢/c (~seq out-key:id out-expr:expr) ...)
              ; check key direction
              #:with bad-keys (filter-not (lambda (id) (eq? 'out (delim-direction id)))
                                          (syntax->list #'(out-key ...)))
@@ -182,10 +185,12 @@
              #'(make-prop-sentinel tg:out
                                    (list (cons 'out-key #'out-expr) ...)))
 
+    ; redirect conclusion
     (pattern (new-expr)
              #:attr expr
              #'(copy-prop-keys/stx tg:in #'new-expr the-stx))
 
+    ; (invalid)
     (pattern p
              #:post (~fail "not a valid conclusion")
              #:attr expr #'#f))
