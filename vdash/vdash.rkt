@@ -7,7 +7,8 @@
                      racket/base
                      racket/syntax
                      syntax/parse
-                     syntax/id-table))
+                     syntax/id-table)
+         (for-meta 2 racket/base))
 
 
 
@@ -16,12 +17,12 @@
     (error "the-stx used outside of judgement")))
 
 (begin-for-syntax
-  (define delim-directions
+  ;; relation keys
+  (define rel-key-dirs
     (make-free-id-table))
 
-  (define (delim-direction id)
-    (free-id-table-ref delim-directions
-                       id
+  (define (rel-key-dir id)
+    (free-id-table-ref rel-key-dirs id
                        (lambda ()
                          (raise-syntax-error #f "relation key undefined" id))))
 
@@ -45,9 +46,9 @@
     [(_ . dd:delim-defs)
      #:with (keys ...) #'dd.keys
      #:do [(for ([key (in-syntax #'(keys ...))])
-             (when (free-id-table-ref! delim-directions key #f)
+             (when (free-id-table-ref! rel-key-dirs key #f)
                (raise-syntax-error #f "relation key already defined" key))
-             (free-id-table-set! delim-directions key
+             (free-id-table-set! rel-key-dirs key
                                  (syntax-e #'dd.dir)))]
      #'(begin
          (define-syntax (keys stx-obj)
@@ -71,18 +72,20 @@
                      #px"-{4,}"
                      (symbol->string (syntax-e #'x)))))
 
-  (define-syntax-class ⊢/p
-    #:datum-literals (⊢)
-    (pattern ⊢)
-    (pattern #:if))
+  (define-syntax ~⊢/p
+    (pattern-expander
+     (lambda (s) (syntax-case s ()
+              [_ #'(~or (~datum ⊢)
+                        #:if)]))))
 
-  (define-syntax-class ⊢/c
-    #:datum-literals (⊢)
-    (pattern ⊢)
-    (pattern #:then))
+  (define-syntax ~⊢/c
+    (pattern-expander
+     (lambda (s) (syntax-case s ()
+              [_ #'(~or (~datum ⊢)
+                        #:then)]))))
+
 
   ;; actual syntax ;;
-
   (define-splicing-syntax-class stxparse-kw
     (pattern (~and kw (~or #:literals
                            #:datum-literals
@@ -96,10 +99,10 @@
                   :---- ~!
                   . conc:conclusion]
              ; extract keys & premises
-             #:with ((~seq in-keys:id in-pats:expr) ... . prems:premises) #'(before-line ...)
+             #:with ((~seq in-keys:id in-pats:expr) ... ~! . prems:premises) #'(before-line ...)
 
              ; check key direction
-             #:with bad-keys (filter-not (lambda (id) (eq? 'in (delim-direction id)))
+             #:with bad-keys (filter-not (lambda (id) (eq? 'in (rel-key-dir id)))
                                          (syntax->list #'(in-keys ...)))
              #:fail-unless
              (null? (syntax-e #'bad-keys)) (format "relation key is not an input"
@@ -120,7 +123,7 @@
     (pattern [(~and kw (~or #:with
                             #:fail-when
                             #:fail-unless))
-              arg1 arg2
+              ~! arg1 arg2
               . after:premises]
              #:with (stxparse-directives ...)
              #'([kw arg1 arg2] after.stxparse-directives ...))
@@ -128,7 +131,7 @@
     (pattern [(~and kw (~or #:and
                             #:do
                             #:when))
-              arg1
+              ~! arg1
               . after:premises]
              #:with (stxparse-directives ...)
              #'([kw arg1] after.stxparse-directives ...))
@@ -145,16 +148,16 @@
 
   (define-syntax-class premise
     #:attributes (stxparse-directive)
-    (pattern [:⊢/p targ-expr (~seq i/o-key:id i/o-expr:expr) ...]
+    (pattern [(~⊢/p) targ-expr (~seq i/o-key:id i/o-expr:expr) ...]
              #:with ({in-key in-expr} ...)
 
              ; find input keys
-             (filter (syntax-parser [{k v} (eq? 'in (delim-direction #'k))])
+             (filter (syntax-parser [{k v} (eq? 'in (rel-key-dir #'k))])
                      (syntax->list #'((i/o-key i/o-expr) ...)))
 
              ; find output keys
              #:with ({out-key out-pat} ...)
-             (filter (syntax-parser [{k v} (eq? 'out (delim-direction #'k))])
+             (filter (syntax-parser [{k v} (eq? 'out (rel-key-dir #'k))])
                      (syntax->list #'((i/o-key i/o-expr) ...)))
 
              ; output expression & directive
@@ -173,9 +176,9 @@
              #'(raise-syntax-error #f (format msg fmt ...) the-stx))
 
     ; tagged conclusion
-    (pattern (:⊢/c (~seq out-key:id out-expr:expr) ...)
+    (pattern ((~⊢/c) (~seq out-key:id out-expr:expr) ...)
              ; check key direction
-             #:with bad-keys (filter-not (lambda (id) (eq? 'out (delim-direction id)))
+             #:with bad-keys (filter-not (lambda (id) (eq? 'out (rel-key-dir id)))
                                          (syntax->list #'(out-key ...)))
              #:fail-unless
              (null? (syntax-e #'bad-keys)) (format "relation key is not an output"

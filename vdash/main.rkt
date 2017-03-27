@@ -12,16 +12,11 @@
     (define-relation-keys
       #:in (P+ P* toInt)
       #:out (=>))
-    (define-literal-set peano
-      #:datum-literals (TRUE FALSE zer suc)
-      ())
     )
 
 
   (define-syntax zer
     (judgement-parser
-     #:literal-sets (peano)
-
      [(zer) P+ n
       ---------
       #:then => n]
@@ -38,8 +33,6 @@
 
   (define-syntax suc
     (judgement-parser
-     #:literal-sets (peano)
-
      [(suc n) P+ m
       [#:if n P+ m => s]
       -----------
@@ -60,14 +53,12 @@
 
   (define-syntax p+
     (judgement-parser
-     #:literal-sets (peano)
      [(_ x y) [#:if x P+ y => z]
       ------------
       'z]))
 
   (define-syntax p*
     (judgement-parser
-     #:literal-sets (peano)
      [(_ x y) [#:if x P* y => z]
       ------------
       'z]))
