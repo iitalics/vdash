@@ -153,32 +153,31 @@
 
   (define-syntax-class premise
     #:attributes (binding binding/ooo expr expr/ooo)
-    (pattern [(~⊢/p) targ-expr (~seq i/o-key:id i/o-expr:expr) ...]
-             #:with ({in-key in-expr} ...)
+    (pattern [~! (~⊢/p) targ-expr (~seq i/o-key:id i/o-expr:expr) ...]
+             #:with ooo #'(... ...)
 
              ; find input keys
-             (filter (syntax-parser [{k v} (eq? 'in (rel-key-dir #'k))])
-                     (syntax->list #'((i/o-key i/o-expr) ...)))
+             #:with ({in-key in-expr} ...) (filter (syntax-parser [{k v} (eq? 'in (rel-key-dir #'k))])
+                                                   (syntax-e #'({i/o-key i/o-expr} ...)))
+             #:with in-list-expr #'(list (cons 'in-key #'in-expr) ...)
 
              ; find output keys
-             #:with ({out-key out-pat} ...)
-             (filter (syntax-parser [{k v} (eq? 'out (rel-key-dir #'k))])
-                     (syntax->list #'((i/o-key i/o-expr) ...)))
+             #:with ({out-key out-pat} ...) (filter (syntax-parser [{k v} (eq? 'out (rel-key-dir #'k))])
+                                                    (syntax->list #'({i/o-key i/o-expr} ...)))
+             #:with out-list-expr #'(list 'out-key ...)
 
-             ; output expression & directive
-             #:attr expr #'(eval-relation #'targ-expr
-                                          tg:in (list (cons 'in-key #'in-expr) ...)
-                                          tg:out (list 'out-key ...)
-                                          '())
-             #:attr expr/ooo #'(map (curryr eval-relation
-                                            tg:in (list (cons 'in-key #'in-expr) ...)
-                                            tg:out (list 'out-key ...)
-                                            '())
-                                    (syntax-e #'(targ-expr (... ...))))
+             ; output expression & binding
+             #:attr expr #'(do-rel/raw (list #'targ-expr)
+                                       tg:in in-list-expr
+                                       tg:out out-list-expr
+                                       '())
+             #:attr expr/ooo #'(do-rel/raw (syntax-e #'(targ-expr ooo))
+                                           tg:in in-list-expr
+                                           tg:out out-list-expr
+                                           '())
 
-
-             #:attr binding #'(out-pat ...)
-             #:attr binding/ooo #'((out-pat ...) (... ...))
+             #:attr binding #'(_ [(out-pat ...)])
+             #:attr binding/ooo #'(_ [(out-pat ...) ooo])
              ))
 
   (define-syntax-class conclusion
@@ -238,15 +237,35 @@
 
 
 
-(define (eval-relation stx
-                       tg-in in-keys/stx
-                       tg-out out-keys
-                       ctx)
-  (let* ([stx- (set-prop-keys/stx stx tg-in in-keys/stx)]
-         [stx/e (local-expand stx- 'expression '())])
-    (unless (has-prop-keys? stx/e tg-out out-keys)
-      (raise-syntax-error #f (format "incorrect judgement output keys; expected ~s, got ~s"
-                                     out-keys
-                                     (get-prop-keys stx/e tg-out))
-                          stx/e))
-    (get-prop-stx stx/e tg-out out-keys)))
+; (do-rel/raw ...)
+;   exprs : (listof syntax?)
+;   tg-in : symbol?
+;   in-keys/stx : (assoc/c symbol? syntax?)
+;   tg-out : symbol?
+;   out-keys : (listof symbol?)
+;   ctx : any/c
+; ->
+;   (list/c any/c                      [context bindings]
+;           (listof (listof syntax?))  [outputs]
+;           )
+(define (do-rel/raw exprs
+                    tg-in in-keys/stx
+                    tg-out out-keys
+                    ctx)
+
+  (let ([exprs/expanded (map (lambda (e)
+                               (let ([e+tags (set-prop-keys/stx e tg-in in-keys/stx)])
+                                 (local-expand e+tags 'expression '())))
+                             exprs)])
+    (for ([e/e (in-list exprs/expanded)])
+      (unless (has-prop-keys? e/e
+                              tg-out out-keys)
+        (raise-syntax-error #f (format "incorrect judgement output keys; expected ~s, got ~s"
+                                       out-keys
+                                       (get-prop-keys e/e tg-out))
+                            e/e)))
+
+    (let ([outputs
+           (map (lambda (e/e) (get-prop-stx e/e tg-out out-keys))
+                exprs/expanded)])
+      (list #f outputs))))
