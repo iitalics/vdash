@@ -1,6 +1,7 @@
 #lang racket
 (require (for-syntax "../vdash.rkt"
-                     syntax/parse))
+                     syntax/parse
+                     racket/list))
 
 (provide (rename-out [top #%top-interaction]
                      [mod #%module-begin]
@@ -15,19 +16,21 @@
 
 (define-syntax plus
   (judgement-parser
-   [(_ x y) <compile> ()
-    [#:if x <compile> () to (x-ins ...)]
-    [#:if y <compile> () to (y-ins ...)]
+   [(_ a b ...) <compile> ()
+    [#:if a <compile> () to (a-ins ...)]
+    [#:if b <compile> () to (b-ins ...)] ...
+    #:with (fold ...) (make-list (length (syntax-e #'(b ...))) #'ADD)
     ----------
-    #:then to (x-ins ... y-ins ... ADD)]))
+    #:then to (a-ins ... b-ins ... ... fold ...)]))
 
 (define-syntax mult
   (judgement-parser
-   [(_ x y) <compile> ()
-    [#:if x <compile> () to (x-ins ...)]
-    [#:if y <compile> () to (y-ins ...)]
+   [(_ a b ...) <compile> ()
+    [#:if a <compile> () to (a-ins ...)]
+    [#:if b <compile> () to (b-ins ...)] ...
+    #:with (fold ...) (make-list (length (syntax-e #'(b ...))) #'MUL)
     ----------
-    #:then to (x-ins ... y-ins ... MUL)]))
+    #:then to (a-ins ... b-ins ... ... fold ...)]))
 
 (define-syntax d
   (judgement-parser
@@ -39,9 +42,13 @@
     #:error (format "unsupported datum ~s" (syntax-e #'d))]))
 
 (define-syntax mod
-  (syntax-parser
-    [(_ . es)
-     #'(#%module-begin (void))]))
+  (judgement-parser
+   [(_ es ...)
+    [#:if es <compile> () to e-prgm] ...
+    -----------
+    (#%module-begin
+     (displayln (string-join (map ~a 'e-prgm)))
+     ...)]))
 
 (define-syntax top
   (judgement-parser
