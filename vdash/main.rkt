@@ -69,6 +69,13 @@
       ------------
       'k]))
 
+  (define-syntax (nats->int s)
+    (judgement-parse s
+     [(_ n ...)
+      [#:if n toInt () => k] ...
+      ------------
+      '(k ...)]))
+
   (check-equal? (p+ (zer) (zer))               '(zer))
   (check-equal? (p+ (zer) (suc (zer)))         '(suc (zer)))
   (check-equal? (p+ (suc (zer)) (suc (zer)))   '(suc (suc (zer))))
@@ -83,6 +90,8 @@
   (check-equal? (nat->int (zer)) 0)
   (check-equal? (nat->int (suc (zer))) 1)
   (check-equal? (nat->int (suc (suc (zer)))) 2)
+
+  (check-equal? (nats->int (zer) (zer) (suc (zer)))  '(0 0 1))
 
   )
 
