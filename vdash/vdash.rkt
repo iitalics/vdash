@@ -38,7 +38,6 @@
              #:attr after #'a))
   )
 
-
 (provide define-relation-keys)
 (define-syntax (define-relation-keys stx)
   (syntax-parse stx
@@ -56,6 +55,7 @@
                                stx-obj))
          ...
          (define-relation-keys . dd.after))]))
+
 
 (begin-for-syntax
   ;; utilities ;;
@@ -139,7 +139,12 @@
     ; normal premise
     (pattern [prem:premise . after:premises]
              #:with (stxparse-directives ...)
-             #'(prem.stxparse-directive
+             #'([#:with prem.binding prem.expr]
+                after.stxparse-directives ...))
+
+    (pattern [prem:premise (~datum ...) . after:premises]
+             #:with (stxparse-directives ...)
+             #'([#:with prem.binding/ooo prem.expr/ooo]
                 after.stxparse-directives ...))
 
     ; base case
@@ -147,7 +152,7 @@
 
 
   (define-syntax-class premise
-    #:attributes (stxparse-directive)
+    #:attributes (binding binding/ooo expr expr/ooo)
     (pattern [(~⊢/p) targ-expr (~seq i/o-key:id i/o-expr:expr) ...]
              #:with ({in-key in-expr} ...)
 
@@ -161,12 +166,20 @@
                      (syntax->list #'((i/o-key i/o-expr) ...)))
 
              ; output expression & directive
-             #:with expr #'(eval-relation #'targ-expr
+             #:attr expr #'(eval-relation #'targ-expr
                                           tg:in (list (cons 'in-key #'in-expr) ...)
                                           tg:out (list 'out-key ...)
                                           '())
-             #:attr stxparse-directive
-             #'[#:with (out-pat ...) expr]))
+             #:attr expr/ooo #'(map (curryr eval-relation
+                                            tg:in (list (cons 'in-key #'in-expr) ...)
+                                            tg:out (list 'out-key ...)
+                                            '())
+                                    (syntax-e #'(targ-expr (... ...))))
+
+
+             #:attr binding #'(out-pat ...)
+             #:attr binding/ooo #'((out-pat ...) (... ...))
+             ))
 
   (define-syntax-class conclusion
     #:attributes (expr)
