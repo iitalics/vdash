@@ -15,8 +15,8 @@
 (define (has-prop-keys? stx tg keys)
   (let ([h (syntax-property stx tg)])
     (cond
-      [(empty? keys) #t]
-      [(false? h) #f]
+      [(false? h) (empty? keys)]
+      [(empty? keys) (empty? (hash-keys h))]
       [else
        (empty? (set-symmetric-difference (hash-keys h) keys))])))
 
@@ -29,9 +29,10 @@
     (map (curry hash-ref h) keys)))
 
 (define (set-prop-keys/stx stx tg k/s)
-  (when (syntax-property stx tg)
-    (printf "warning: overwriting keys: ~a for tag:~ a"
+  #;(when (syntax-property stx tg)
+    (printf "warning: overwriting keys ~a to ~a for tag: ~a\n"
             (hash-keys (syntax-property stx tg))
+            (map car k/s)
             tg))
   (syntax-property stx tg (make-hash k/s)))
 
