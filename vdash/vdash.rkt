@@ -7,7 +7,8 @@
                      racket/base
                      racket/syntax
                      syntax/parse
-                     syntax/id-table)
+                     syntax/id-table
+                     "stx-props.rkt")
          (for-meta 2 racket/base))
 
 
@@ -211,21 +212,35 @@
              #:attr expr #'#f))
   )
 
+(define fallback-parse
+  (box
+   (lambda (s)
+     (raise-syntax-error #f "no matching clauses for expression"
+                         s))))
+
 (provide judgement-parse)
 (define-syntax judgement-parse
+  (syntax-rules ()
+    [(_ . x)
+     (let ([fbp (unbox fallback-parse)])
+       (judgement-parse/fallback fbp . x))]))
+
+(define-syntax judgement-parse/fallback
   (syntax-parser
-    [(_ stx-obj
+    [(_ fallback
+        stx-obj
         (~seq spkw:stxparse-kw ~! arg) ...
         . jcs)
      #:and ~!
      #:with (jc:judgement-clause ...) #'jcs
-     #:with parse-body (stx-splice #'([spkw.kw arg] ...
-                                      [jc.stxparse ...]))
+     #:with (parse-body ...) (stx-splice #'([spkw.kw arg] ...
+                                            [jc.stxparse ...]))
      #'(let ([the-stx-obj stx-obj])
          (syntax-parameterize
              ([the-stx (make-rename-transformer #'the-stx-obj)])
            (syntax-parse the-stx-obj
-             . parse-body)))]))
+             parse-body ...
+             [_ (fallback the-stx)])))]))
 
 (provide judgement-parser)
 (define-syntax (judgement-parser stx)
@@ -235,6 +250,15 @@
        (lambda (stx-obj)
          (judgement-parse stx-obj jc ...)))]))
 
+(provide define-fallback-judgements)
+(define-syntax define-fallback-judgements
+  (syntax-parser
+    [(_ jc ...)
+     #'(let ([fbp (unbox fallback-parse)])
+         (set-box! fallback-parse
+                   (lambda (stx)
+                     (judgement-parse/fallback fbp stx
+                                               jc ...))))]))
 
 
 ; (do-rel/raw ...)

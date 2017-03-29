@@ -30,7 +30,7 @@
 
 (define (set-prop-keys/stx stx tg k/s)
   (when (syntax-property stx tg)
-    (printf "warning: overwriting keys: ~a for tag:~ a"
+    (printf "warning: overwriting keys: ~a for tag: ~a"
             (hash-keys (syntax-property stx tg))
             tg))
   (syntax-property stx tg (make-hash k/s)))

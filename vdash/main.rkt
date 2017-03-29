@@ -55,44 +55,50 @@
     (judgement-parser
      [(_ x y) [#:if x P+ y => z]
       ------------
-      'z]))
+      z]))
 
   (define-syntax p*
     (judgement-parser
      [(_ x y) [#:if x P* y => z]
       ------------
-      'z]))
+      z]))
 
-  (define-syntax nat->int
+  (begin-for-syntax
+    (define-fallback-judgements
+      #:datum-literals (suc zer)
+      [n [#:if n toInt () => k]
+       --------
+       'k]))
+
+  (check-equal? (zer)             0)
+  (check-equal? (suc (zer))       1)
+  (check-equal? (suc (suc (zer))) 2)
+
+  (check-equal? (p+ (zer) (zer))               0)
+  (check-equal? (p+ (zer) (suc (zer)))         1)
+  (check-equal? (p+ (suc (zer)) (suc (zer)))   2)
+  (check-equal? (p+ (suc (suc (zer))) (zer))   2)
+
+  (check-equal? (p* (zer) (zer))                         0)
+  (check-equal? (p* (zer) (suc (zer)))                   0)
+  (check-equal? (p* (suc (zer)) (zer))                   0)
+  (check-equal? (p* (suc (suc (zer))) (suc (zer)))       2)
+  (check-equal? (p* (suc (suc (zer))) (suc (suc (zer)))) 4)
+  (check-equal? (p* (suc (suc (suc (zer)))) (suc (suc (zer)))) 6)
+  (check-equal? (p* (suc (suc (zer))) (suc (suc (suc (zer))))) 6)
+
+  (begin-for-syntax
+    (define-relation-keys
+      #:in (FOO)
+      #:out (BAR)))
+
+  (define-syntax woa
     (judgement-parser
-     [(_ n) [#:if n toInt () => k]
-      ------------
-      'k]))
+     [(_) FOO x
+      --------
+      #:then BAR x]))
 
-  (define-syntax (nats->int s)
-    (judgement-parse s
-     [(_ n ...)
-      [#:if n toInt () => k] ...
-      ------------
-      '(k ...)]))
-
-  (check-equal? (p+ (zer) (zer))               '(zer))
-  (check-equal? (p+ (zer) (suc (zer)))         '(suc (zer)))
-  (check-equal? (p+ (suc (zer)) (suc (zer)))   '(suc (suc (zer))))
-  (check-equal? (p+ (suc (suc (zer))) (zer))   '(suc (suc (zer))))
-
-  (check-equal? (p* (zer) (zer))               '(zer))
-  (check-equal? (p* (zer) (suc (zer)))         '(zer))
-  (check-equal? (p* (suc (zer)) (zer))         '(zer))
-  (check-equal? (p* (suc (suc (zer))) (suc (zer)))       '(suc (suc (zer))))
-  (check-equal? (p* (suc (suc (zer))) (suc (suc (zer)))) '(suc (suc (suc (suc (zer))))))
-
-  (check-equal? (nat->int (zer)) 0)
-  (check-equal? (nat->int (suc (zer))) 1)
-  (check-equal? (nat->int (suc (suc (zer)))) 2)
-
-  (check-equal? (nats->int (zer) (zer) (suc (zer)))  '(0 0 1))
-
+  ;; TODO: fix infinite-loop bug when you try to expand (woa)
   )
 
 (module+ main
