@@ -212,54 +212,51 @@
              #:attr expr #'#f))
   )
 
-(define fallback-parse
-  (box
-   (lambda (s)
-     (raise-syntax-error #f "no matching clauses for expression"
-                         s))))
-
-(provide judgement-parse)
-(define-syntax judgement-parse
-  (syntax-rules ()
-    [(_ . x)
-     (let ([fbp (unbox fallback-parse)])
-       (judgement-parse/fallback fbp . x))]))
-
 (define-syntax judgement-parse/fallback
   (syntax-parser
-    [(_ fallback
+    [(_ fallback-parser
         stx-obj
         (~seq spkw:stxparse-kw ~! arg) ...
-        . jcs)
-     #:and ~!
+        ~! . jcs)
      #:with (jc:judgement-clause ...) #'jcs
      #:with (parse-body ...) (stx-splice #'([spkw.kw arg] ...
                                             [jc.stxparse ...]))
      #'(let ([the-stx-obj stx-obj])
-         (syntax-parameterize
-             ([the-stx (make-rename-transformer #'the-stx-obj)])
+         (syntax-parameterize ([the-stx (make-rename-transformer #'the-stx-obj)])
            (syntax-parse the-stx-obj
              parse-body ...
-             [_ (fallback the-stx)])))]))
+             [_ (fallback-parser the-stx-obj)])))]))
+
+(define fallback-parse
+  (box (lambda (s)
+         (raise-syntax-error #f "no matching clauses for expression"
+                             s))))
+
+(provide judgement-parse)
+(define-syntax judgement-parse
+  (syntax-rules ()
+    [(_ stx-obj kw/clause ...)
+     (judgement-parse/fallback (unbox fallback-parse)
+                               stx-obj
+                               kw/clause ...)]))
 
 (provide judgement-parser)
-(define-syntax (judgement-parser stx)
-  (syntax-parse stx
-    [(_ jc ...)
-     (syntax/loc stx
-       (lambda (stx-obj)
-         (judgement-parse stx-obj jc ...)))]))
+(define-syntax judgement-parser
+  (syntax-rules ()
+    [(_ kw/clause ...)
+     (lambda (stx-obj)
+       (judgement-parse stx-obj kw/clause ...))]))
 
 (provide define-fallback-judgements)
 (define-syntax define-fallback-judgements
-  (syntax-parser
-    [(_ jc ...)
-     #'(let ([fbp (unbox fallback-parse)])
-         (set-box! fallback-parse
-                   (lambda (stx)
-                     (judgement-parse/fallback fbp stx
-                                               jc ...))))]))
-
+  (syntax-rules ()
+    [(_ kw/clause ...)
+     (let* ([old-fallback (unbox fallback-parse)]
+            [new-fallback (lambda (stx-obj)
+                            (judgement-parse/fallback old-fallback stx-obj
+                                                      kw/clause ...))])
+       (set-box! fallback-parse
+                 new-fallback))]))
 
 ; (do-rel/raw ...)
 ;   exprs : (listof syntax?)

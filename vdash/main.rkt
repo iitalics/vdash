@@ -97,8 +97,6 @@
      [(_) FOO x
       --------
       #:then BAR x]))
-
-  ;; TODO: fix infinite-loop bug when you try to expand (woa)
   )
 
 (module+ main
